@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 2.8.12)
 project(rapidcheck)
 
 # Don't warn about symbol visibility for static libraries with CMake 3.3 and later.
@@ -10,7 +10,6 @@ enable_testing()
 
 option(RC_ENABLE_TESTS "Build RapidCheck tests" OFF)
 option(RC_ENABLE_EXAMPLES "Build RapidCheck examples" OFF)
-option(RC_SHARED_LIBRARY "Build RapidCheck as a shared library" OFF)
 
 if(MSVC)
   # /bigobj - some object files become very large so we need this
@@ -24,13 +23,7 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-missing-braces -std=c++11")
 endif()
 
-if(RC_SHARED_LIBRARY)
-  set(LIBRARY_TYPE "SHARED")
-else()
-  set(LIBRARY_TYPE "STATIC")
-endif()
-
-add_library(rapidcheck ${LIBRARY_TYPE}
+add_library(rapidcheck
   src/BeforeMinimalTestCase.cpp
   src/Check.cpp
   src/Classify.cpp
@@ -76,7 +69,24 @@ else()
     APPEND_STRING PROPERTY COMPILE_FLAGS " -O3")
 endif()
 
-target_include_directories(rapidcheck PUBLIC include)
+
+
+target_include_directories(rapidcheck PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+    $<INSTALL_INTERFACE:include/rapidcheck>  # <prefix>/include/rapidcheck
+)
+
+include(GNUInstallDirs)
+install(TARGETS rapidcheck EXPORT rapidcheckConfig
+    ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})  # This is for Windows
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+install(EXPORT rapidcheckConfig DESTINATION share/rapidcheck/cmake)
+
+export(TARGETS rapidcheck FILE rapidcheckConfig.cmake)
+
 
 add_subdirectory(ext)
 
@@ -89,5 +99,3 @@ if (RC_ENABLE_EXAMPLES)
 endif()
 
 add_subdirectory(extras)
-
-install(TARGETS rapidcheck DESTINATION /usr/lib)
